@@ -1,0 +1,6 @@
+playwright
+praw
+python-dotenv
+anthropic
+chromadb
+schedule
