@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: pulsescout
+    runtime: image
+    image:
+      url: ghcr.io/mohamedzait20003/pulsescout:latest
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DEV_TO_URI
+        sync: false
+      - key: DEV_TO_KEY
+        sync: false
+      - key: HN_API_URI
+        sync: false
+      - key: QDRANT_URI
+        sync: false
+      - key: QDRANT_KEY
+        sync: false
+      - key: OLLAMA_URI
+        sync: false
+      - key: OLLAMA_KEY
+        sync: false
+      - key: OLLAMA_MODEL
+        sync: false

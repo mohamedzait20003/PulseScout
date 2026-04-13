@@ -1,6 +1,8 @@
-playwright
-praw
+requests
 python-dotenv
-anthropic
-chromadb
-schedule
+qdrant-client
+fastapi
+uvicorn
+ollama
+pytest
+httpx
