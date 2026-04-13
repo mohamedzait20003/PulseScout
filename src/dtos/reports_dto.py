@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from common_dto import PostDto
+from .common_dto import PostDto
 
 
 class ReportsResponse(BaseModel):
