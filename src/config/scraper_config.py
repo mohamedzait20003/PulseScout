@@ -8,15 +8,14 @@ METHOD_DEFAULTS = {
     "comment_timeout": 10,
     "max_text_length": 2000,
     "max_comment_length": 500,
-    "devto_per_page": 30,
 }
 
 KEY_DEFAULTS = {
-    "devto_key": os.getenv("DEV_TO_KEY"),
+    "youtube_key": os.getenv("YOUTUBE_KEY"),
 }
 
 URL_DEFAULTS = {
-    "devto_api_url": os.getenv("DEV_TO_URI") or "https://dev.to/api",
+    "youtube_api_url": os.getenv("YOUTUBE_URI") or "https://www.googleapis.com/youtube/v3",
     "hn_api_url": os.getenv("HN_API_URI") or "https://hacker-news.firebaseio.com/v0",
 }
 

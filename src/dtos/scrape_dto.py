@@ -3,7 +3,7 @@ from .common_dto import TopicDto, TrendDto
 
 
 class ScrapeRequest(BaseModel):
-    tags: list[str] = ["python", "ai"]
+    tags: list[str] = ["AI trends", "tech startups"]
     limit: int = 25
 
 class ScrapeResponse(BaseModel):

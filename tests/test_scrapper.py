@@ -4,58 +4,82 @@ from unittest.mock import patch, MagicMock
 from utils.scrap_util import Scrapper
 
 
-class TestScrapperDevto:
+class TestScrapperYoutube:
     def setup_method(self):
         self.scrapper = Scrapper()
 
     @patch("utils.scrap_util.requests.get")
-    def test_scrap_devto_returns_posts(self, mock_get):
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            json=MagicMock(return_value=[
-                {
-                    "id": 12345,
-                    "title": "Test Article",
-                    "description": "A test article about Python.",
-                    "positive_reactions_count": 10,
-                    "published_at": "2026-04-12T00:00:00Z",
+    def test_scrap_youtube_returns_posts(self, mock_get):
+        def side_effect(url, **kwargs):
+            mock = MagicMock()
+            mock.raise_for_status = MagicMock()
+            if "/search" in url:
+                mock.json.return_value = {
+                    "items": [
+                        {
+                            "id": {"videoId": "abc123"},
+                            "snippet": {
+                                "title": "AI Trends 2026",
+                                "description": "A video about AI trends.",
+                                "publishedAt": "2026-04-12T00:00:00Z",
+                            },
+                        }
+                    ]
                 }
-            ]),
-        )
-        mock_get.return_value.raise_for_status = MagicMock()
+            elif "/videos" in url:
+                mock.json.return_value = {
+                    "items": [
+                        {"id": "abc123", "statistics": {"viewCount": "15000"}}
+                    ]
+                }
+            return mock
 
-        posts = self.scrapper.scrap_devto(tag="python", limit=1, num_comments=0)
+        mock_get.side_effect = side_effect
+
+        posts = self.scrapper.scrap_youtube(tag="AI trends", limit=1, num_comments=0)
 
         assert len(posts) == 1
-        assert posts[0]["id"] == "12345"
-        assert posts[0]["title"] == "Test Article"
-        assert posts[0]["source"] == "devto"
-        assert posts[0]["subreddit"] == "python"
+        assert posts[0]["id"] == "abc123"
+        assert posts[0]["title"] == "AI Trends 2026"
+        assert posts[0]["source"] == "youtube"
+        assert posts[0]["score"] == 15000
 
     @patch("utils.scrap_util.requests.get")
-    def test_scrap_devto_empty_response(self, mock_get):
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            json=MagicMock(return_value=[]),
-        )
-        mock_get.return_value.raise_for_status = MagicMock()
+    def test_scrap_youtube_empty_response(self, mock_get):
+        mock = MagicMock()
+        mock.raise_for_status = MagicMock()
+        mock.json.return_value = {"items": []}
+        mock_get.return_value = mock
 
-        posts = self.scrapper.scrap_devto(tag="nonexistent", limit=5, num_comments=0)
+        posts = self.scrapper.scrap_youtube(tag="nonexistent", limit=5, num_comments=0)
         assert posts == []
 
     @patch("utils.scrap_util.requests.get")
-    def test_scrap_devto_respects_limit(self, mock_get):
-        articles = [
-            {"id": i, "title": f"Post {i}", "description": "", "positive_reactions_count": 0, "published_at": ""}
+    def test_scrap_youtube_respects_limit(self, mock_get):
+        search_items = [
+            {
+                "id": {"videoId": f"vid{i}"},
+                "snippet": {"title": f"Video {i}", "description": "", "publishedAt": ""},
+            }
             for i in range(10)
         ]
-        mock_get.return_value = MagicMock(
-            status_code=200,
-            json=MagicMock(return_value=articles),
-        )
-        mock_get.return_value.raise_for_status = MagicMock()
+        stats_items = [
+            {"id": f"vid{i}", "statistics": {"viewCount": "100"}}
+            for i in range(10)
+        ]
 
-        posts = self.scrapper.scrap_devto(tag="python", limit=3, num_comments=0)
+        def side_effect(url, **kwargs):
+            mock = MagicMock()
+            mock.raise_for_status = MagicMock()
+            if "/search" in url:
+                mock.json.return_value = {"items": search_items[:3]}
+            elif "/videos" in url:
+                mock.json.return_value = {"items": stats_items[:3]}
+            return mock
+
+        mock_get.side_effect = side_effect
+
+        posts = self.scrapper.scrap_youtube(tag="tech", limit=3, num_comments=0)
         assert len(posts) == 3
 
 
@@ -88,7 +112,6 @@ class TestScrapperHackernews:
         assert len(posts) == 2
         assert posts[0]["id"] == "100"
         assert posts[0]["source"] == "hackernews"
-        assert posts[0]["subreddit"] == ""
 
     @patch("utils.scrap_util.requests.get")
     def test_scrap_hackernews_skips_none_items(self, mock_get):
@@ -111,23 +134,25 @@ class TestScrapperComments:
         self.scrapper = Scrapper()
 
     @patch("utils.scrap_util.requests.get")
-    def test_fetch_devto_comments(self, mock_get):
+    def test_fetch_youtube_comments(self, mock_get):
         mock_get.return_value = MagicMock(
             status_code=200,
-            json=MagicMock(return_value=[
-                {"body_html": "<p>Great!</p>"},
-                {"body_html": "<p>Thanks!</p>"},
-            ]),
+            json=MagicMock(return_value={
+                "items": [
+                    {"snippet": {"topLevelComment": {"snippet": {"textDisplay": "Great video!"}}}},
+                    {"snippet": {"topLevelComment": {"snippet": {"textDisplay": "Very helpful"}}}},
+                ]
+            }),
         )
         mock_get.return_value.raise_for_status = MagicMock()
 
-        comments = self.scrapper._fetch_devto_comments(12345, limit=2)
+        comments = self.scrapper._fetch_youtube_comments("abc123", limit=2)
         assert len(comments) == 2
-        assert "<p>Great!</p>" in comments[0]
+        assert "Great video!" in comments[0]
 
     @patch("utils.scrap_util.requests.get")
-    def test_fetch_devto_comments_handles_error(self, mock_get):
+    def test_fetch_youtube_comments_handles_error(self, mock_get):
         mock_get.side_effect = Exception("Network error")
 
-        comments = self.scrapper._fetch_devto_comments(12345, limit=2)
+        comments = self.scrapper._fetch_youtube_comments("abc123", limit=2)
         assert comments == []

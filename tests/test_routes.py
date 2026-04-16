@@ -38,7 +38,7 @@ class TestScrapeRoute:
 
         response = client.post("/scrape/", json={})
         assert response.status_code == 200
-        mock_run.assert_called_once_with(tags=["python", "ai"], limit=25)
+        mock_run.assert_called_once_with(tags=["AI trends", "tech startups"], limit=25)
 
 
 class TestSearchRoute:

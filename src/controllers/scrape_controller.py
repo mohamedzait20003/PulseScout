@@ -15,7 +15,7 @@ class ScrapeController:
 
         all_posts = []
         for tag in tags:
-            posts = self.scrapper.scrap_devto(tag=tag, limit=limit)
+            posts = self.scrapper.scrap_youtube(tag=tag, limit=limit)
             all_posts.extend(posts)
 
         hn_posts = self.scrapper.scrap_hackernews(limit=limit)

@@ -7,7 +7,7 @@ from dtos.common_dto import TopicDto, TrendDto
 class TestScrapeDto:
     def test_request_defaults(self):
         req = ScrapeRequest()
-        assert req.tags == ["python", "ai"]
+        assert req.tags == ["AI trends", "tech startups"]
         assert req.limit == 25
 
     def test_request_custom(self):

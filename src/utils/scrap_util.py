@@ -6,74 +6,89 @@ from config import scraper_config, scraper_urls, KEY_DEFAULTS, URL_DEFAULTS
 
 class Scrapper:
     def __init__(self):
-        self.devto_key = KEY_DEFAULTS["devto_key"]
-
+        self.youtube_key = KEY_DEFAULTS["youtube_key"]
+        self.youtube_api_url = URL_DEFAULTS["youtube_api_url"]
         self.hn_api_url = URL_DEFAULTS["hn_api_url"]
-        self.devto_api_url = URL_DEFAULTS["devto_api_url"]
 
-        self.devto_headers = {}
-        if self.devto_key:
-            self.devto_headers["api-key"] = self.devto_key
-
-    def _fetch_devto_comments(self, article_id: int, limit: int = 5) -> list[str]:
+    def _fetch_youtube_comments(self, video_id: str, limit: int = 5) -> list[str]:
         try:
             resp = requests.get(
-                f"{self.devto_api_url}/comments",
-                params={"a_id": article_id},
-                headers=self.devto_headers,
+                f"{self.youtube_api_url}/commentThreads",
+                params={
+                    "part": "snippet",
+                    "videoId": video_id,
+                    "maxResults": limit,
+                    "order": "relevance",
+                    "key": self.youtube_key,
+                },
                 timeout=10,
             )
             resp.raise_for_status()
-            comments_data = resp.json()
+            items = resp.json().get("items", [])
             return [
-                (c.get("body_html") or c.get("body") or "")[:500]
-                for c in comments_data[:limit]
+                item["snippet"]["topLevelComment"]["snippet"]["textDisplay"][:500]
+                for item in items
             ]
         except Exception:
             return []
 
     @scraper_urls
     @scraper_config
-    def scrap_devto(self, tag: str = None, limit: int = 100,
-                    num_comments: int = 5, timeout: int = 15,
-                    max_text_length: int = 2000, devto_per_page: int = 30,
-                    devto_api_url: str = None, **_):
+    def scrap_youtube(self, tag: str = None, limit: int = 25,
+                      num_comments: int = 5, timeout: int = 15,
+                      max_text_length: int = 2000,
+                      youtube_api_url: str = None, **_):
         posts = []
-        params = {"per_page": min(limit, devto_per_page), "page": 1}
-        if tag:
-            params["tag"] = tag
 
-        fetched = 0
-        while fetched < limit:
-            resp = requests.get(
-                f"{devto_api_url}/articles",
-                params=params,
-                headers=self.devto_headers,
+        search_resp = requests.get(
+            f"{youtube_api_url}/search",
+            params={
+                "part": "snippet",
+                "q": tag or "trending",
+                "type": "video",
+                "order": "relevance",
+                "maxResults": min(limit, 50),
+                "key": self.youtube_key,
+            },
+            timeout=timeout,
+        )
+        search_resp.raise_for_status()
+        search_items = search_resp.json().get("items", [])
+
+        # Get video statistics in bulk
+        video_ids = [item["id"]["videoId"] for item in search_items]
+        stats = {}
+        if video_ids:
+            stats_resp = requests.get(
+                f"{youtube_api_url}/videos",
+                params={
+                    "part": "statistics",
+                    "id": ",".join(video_ids),
+                    "key": self.youtube_key,
+                },
                 timeout=timeout,
             )
-            resp.raise_for_status()
-            articles = resp.json()
-            if not articles:
-                break
+            stats_resp.raise_for_status()
+            for item in stats_resp.json().get("items", []):
+                stats[item["id"]] = item.get("statistics", {})
 
-            for article in articles:
-                comments = self._fetch_devto_comments(article["id"], num_comments)
+        for item in search_items:
+            video_id = item["id"]["videoId"]
+            snippet = item["snippet"]
+            video_stats = stats.get(video_id, {})
 
-                posts.append({
-                    "id": str(article["id"]),
-                    "title": article.get("title", ""),
-                    "text": (article.get("description") or "")[:max_text_length],
-                    "comments": comments,
-                    "score": article.get("positive_reactions_count", 0),
-                    "timestamp": article.get("published_at", ""),
-                    "source": "devto",
-                    "subreddit": tag or "",
-                })
-                fetched += 1
-                if fetched >= limit:
-                    break
+            comments = self._fetch_youtube_comments(video_id, num_comments)
 
-            params["page"] += 1
+            posts.append({
+                "id": video_id,
+                "title": snippet.get("title", ""),
+                "text": (snippet.get("description") or "")[:max_text_length],
+                "comments": comments,
+                "score": int(video_stats.get("viewCount", 0)),
+                "timestamp": snippet.get("publishedAt", ""),
+                "source": "youtube",
+                "subreddit": tag or "",
+            })
 
         return posts
 
