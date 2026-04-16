@@ -30,6 +30,7 @@ class QdrantConnection:
 class BaseModel:
     collection_name: str = ""
     vector_size: int = 384
+    indexed_fields: list[str] = []
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -51,6 +52,13 @@ class BaseModel:
                     distance=Distance.COSINE,
                 ),
             )
+            
+            for field in cls.indexed_fields:
+                client.create_payload_index(
+                    collection_name=cls.collection_name,
+                    field_name=field,
+                    field_schema="keyword",
+                )
 
     def to_payload(self) -> dict:
         raise NotImplementedError

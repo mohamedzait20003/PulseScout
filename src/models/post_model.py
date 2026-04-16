@@ -3,6 +3,7 @@ from .base_model import BaseModel
 
 class PostModel(BaseModel):
     collection_name = "posts"
+    indexed_fields = ["post_id", "batch_id", "timestamp"]
 
     def __init__(self, id: str = "", title: str = "", text: str = "",
                  score: int = 0, timestamp: str = "", source: str = "",

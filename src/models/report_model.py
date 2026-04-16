@@ -4,6 +4,7 @@ from .base_model import BaseModel
 
 class ReportModel(BaseModel):
     collection_name = "reports"
+    indexed_fields = ["batch_id", "timestamp"]
 
     def __init__(self, id: str = "", batch_id: str = "", posts_scraped: int = 0,
                  new_posts_stored: int = 0, sentiment_breakdown: dict = None,
