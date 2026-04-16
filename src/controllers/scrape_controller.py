@@ -34,11 +34,17 @@ class ScrapeController:
         if not batch_posts:
             return {"batch_id": batch_id, "posts_scraped": len(all_posts), "new_posts_stored": 0}
 
-        analysis = self.analyzer.analyze_batch([p.to_dict() for p in batch_posts])
+        try:
+            analysis = self.analyzer.analyze_batch([p.to_dict() for p in batch_posts])
+        except Exception:
+            analysis = {}
 
         trend = None
         if self.last_analysis:
-            trend = self.analyzer.compare_batches(analysis, self.last_analysis)
+            try:
+                trend = self.analyzer.compare_batches(analysis, self.last_analysis)
+            except Exception:
+                trend = None
         self.last_analysis = analysis
 
         report_data = {
