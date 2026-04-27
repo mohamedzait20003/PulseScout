@@ -1,15 +1,14 @@
-from .scrape_dto import ScrapeRequest, ScrapeResponse
+from .scrape_dto import ScrapeResponse
 from .search_dto import SearchRequest, SearchResponse
-from .reports_dto import ReportsResponse, LatestReportResponse
+from .reports_dto import AnalysisReportDto, AnalysisReportsResponse
 from .common_dto import PostDto, TopicDto, TrendDto
 
 __all__ = [
-    "ScrapeRequest",
     "ScrapeResponse",
     "SearchRequest",
     "SearchResponse",
-    "ReportsResponse",
-    "LatestReportResponse",
+    "AnalysisReportDto",
+    "AnalysisReportsResponse",
     "PostDto",
     "TopicDto",
     "TrendDto",

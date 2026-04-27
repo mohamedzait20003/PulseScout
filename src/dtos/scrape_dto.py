@@ -2,10 +2,6 @@ from pydantic import BaseModel
 from .common_dto import TopicDto, TrendDto
 
 
-class ScrapeRequest(BaseModel):
-    tags: list[str] = ["AI trends", "tech startups"]
-    limit: int = 25
-
 class ScrapeResponse(BaseModel):
     batch_id: str
     posts_scraped: int

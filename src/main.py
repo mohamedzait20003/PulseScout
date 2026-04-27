@@ -10,7 +10,7 @@ from routes import scrape_router, reports_router, search_router, health_router
 
 app = FastAPI(
     title="PulseScout",
-    description="Social Knowledge Doomscroll Agent — monitors DEV.to & HackerNews for trends and insights",
+    description="Social Knowledge Doomscroll Agent — monitors YouTube & HackerNews for market insights, trends, and sentiment",
     version="1.0.0",
 )
 

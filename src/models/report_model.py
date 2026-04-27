@@ -38,6 +38,30 @@ class ReportModel(BaseModel):
         return f"{self.actionable_insight}\nTopics: {topics}"
 
     @classmethod
+    def find_all(cls, limit: int = 100) -> list:
+        cls.ensure_collection()
+        results, _ = cls._client().scroll(
+            collection_name=cls.collection_name,
+            limit=limit,
+            with_payload=True,
+        )
+        reports = [cls.from_payload(p.payload) for p in results]
+        return sorted(reports, key=lambda r: r.timestamp, reverse=True)
+
+    @classmethod
+    def find_latest(cls):
+        cls.ensure_collection()
+        results, _ = cls._client().scroll(
+            collection_name=cls.collection_name,
+            limit=1000,
+            with_payload=True,
+        )
+        if not results:
+            return None
+        latest = max(results, key=lambda p: p.payload.get("timestamp", ""))
+        return cls.from_payload(latest.payload)
+
+    @classmethod
     def from_payload(cls, payload: dict):
         return cls(
             id=payload.get("report_id", ""),

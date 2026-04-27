@@ -1,20 +1,10 @@
 import pytest
-from dtos import ScrapeRequest, ScrapeResponse, SearchRequest, SearchResponse
-from dtos import ReportsResponse, LatestReportResponse
+from dtos import ScrapeResponse, SearchRequest, SearchResponse
+from dtos import AnalysisReportDto, AnalysisReportsResponse
 from dtos.common_dto import TopicDto, TrendDto
 
 
 class TestScrapeDto:
-    def test_request_defaults(self):
-        req = ScrapeRequest()
-        assert req.tags == ["AI trends", "tech startups"]
-        assert req.limit == 25
-
-    def test_request_custom(self):
-        req = ScrapeRequest(tags=["rust"], limit=10)
-        assert req.tags == ["rust"]
-        assert req.limit == 10
-
     def test_response_minimal(self):
         resp = ScrapeResponse(batch_id="b1", posts_scraped=10, new_posts_stored=5)
         assert resp.batch_id == "b1"
@@ -56,13 +46,14 @@ class TestSearchDto:
 
 
 class TestReportsDto:
-    def test_reports_response(self):
-        resp = ReportsResponse(count=0, posts=[])
-        assert resp.count == 0
+    def test_analysis_report_dto(self):
+        report = AnalysisReportDto(batch_id="b1", posts_scraped=10, new_posts_stored=5)
+        assert report.batch_id == "b1"
+        assert report.sentiment_breakdown == {}
+        assert report.trend_comparison is None
 
-    def test_latest_report_error(self):
-        resp = LatestReportResponse(error="No recent posts found")
-        assert resp.error == "No recent posts found"
+    def test_analysis_reports_response(self):
+        resp = AnalysisReportsResponse(count=0, reports=[])
         assert resp.count == 0
 
 

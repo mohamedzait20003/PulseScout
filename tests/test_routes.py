@@ -24,21 +24,21 @@ class TestScrapeRoute:
             "trend_comparison": None,
         }
 
-        response = client.post("/scrape/", json={"tags": ["python"], "limit": 5})
+        response = client.post("/scrape/")
         assert response.status_code == 200
         data = response.json()
         assert data["posts_scraped"] == 15
         assert data["new_posts_stored"] == 10
 
     @patch("controllers.scrape_controller.ScrapeController.run_cycle")
-    def test_scrape_default_params(self, mock_run, client):
+    def test_scrape_calls_run_cycle(self, mock_run, client):
         mock_run.return_value = {
             "batch_id": "b1", "posts_scraped": 0, "new_posts_stored": 0,
         }
 
-        response = client.post("/scrape/", json={})
+        response = client.post("/scrape/")
         assert response.status_code == 200
-        mock_run.assert_called_once_with(tags=["AI trends", "tech startups"], limit=25)
+        mock_run.assert_called_once_with()
 
 
 class TestSearchRoute:
@@ -58,18 +58,19 @@ class TestSearchRoute:
 
 
 class TestReportsRoute:
-    @patch("controllers.reports_controller.ReportsController.list_reports")
-    def test_list_reports(self, mock_list, client):
-        mock_list.return_value = {"count": 0, "posts": []}
+    @patch("controllers.reports_controller.ReportsController.get_analysis_reports")
+    def test_analysis_reports(self, mock_analysis, client):
+        mock_analysis.return_value = {"count": 1, "reports": [{
+            "batch_id": "b1", "posts_scraped": 10, "new_posts_stored": 5,
+            "sentiment_breakdown": {"positive": 3, "negative": 1, "neutral": 1},
+            "top_topics": [{"topic": "AI", "count": 3}],
+            "actionable_insight": "AI is rising.",
+            "trend_comparison": None,
+            "timestamp": "2026-04-27T00:00:00",
+        }]}
 
-        response = client.get("/reports/")
+        response = client.get("/reports/analysis")
         assert response.status_code == 200
-        assert response.json()["count"] == 0
-
-    @patch("controllers.reports_controller.ReportsController.get_latest")
-    def test_latest_report(self, mock_latest, client):
-        mock_latest.return_value = {"count": 0, "posts": [], "error": "No recent posts found"}
-
-        response = client.get("/reports/latest")
-        assert response.status_code == 200
-        assert response.json()["error"] == "No recent posts found"
+        data = response.json()
+        assert data["count"] == 1
+        assert data["reports"][0]["batch_id"] == "b1"
