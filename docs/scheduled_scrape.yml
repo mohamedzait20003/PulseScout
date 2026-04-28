@@ -1,0 +1,406 @@
+app:
+  description: ''
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  icon_type: emoji
+  mode: workflow
+  name: PulseScout_1
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 50
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: trigger-schedule
+        targetType: http-request
+      id: 1777310565072-source-1777310571300-target
+      source: '1777310565072'
+      sourceHandle: source
+      target: '1777310571300'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: 1777310571300-source-1777311639665-target
+      source: '1777310571300'
+      sourceHandle: source
+      target: '1777311639665'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: 1777311639665-source-1777311752347-target
+      source: '1777311639665'
+      sourceHandle: source
+      target: '1777311752347'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: http-request
+      id: 1777311752347-true-1777312450711-target
+      source: '1777311752347'
+      sourceHandle: 'true'
+      target: '1777312450711'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: 1777312450711-source-1777312924584-target
+      source: '1777312450711'
+      sourceHandle: source
+      target: '1777312924584'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: 1777312924584-source-1777313155071-target
+      source: '1777312924584'
+      sourceHandle: source
+      target: '1777313155071'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        config:
+          frequency: daily
+          mode: visual
+          timezone: UTC
+          visual_config:
+            monthly_days:
+            - 1
+            on_minute: 0
+            time: 12:00 AM
+            weekdays:
+            - sun
+        frequency: hourly
+        mode: visual
+        selected: false
+        timezone: America/New_York
+        title: Schedule Trigger
+        type: trigger-schedule
+        visual_config:
+          monthly_days:
+          - 1
+          on_minute: 11
+          time: 1:27 PM
+          weekdays:
+          - sun
+      height: 129
+      id: '1777310565072'
+      position:
+        x: 80
+        y: 282
+      positionAbsolute:
+        x: 80
+        y: 282
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        headers: ''
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 100
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 0
+          max_read_timeout: 0
+          max_write_timeout: 0
+        title: HTTP Request
+        type: http-request
+        url: https://pulsescout-latest.onrender.com/scrape/
+        variables: []
+      height: 136
+      id: '1777310571300'
+      position:
+        x: 382
+        y: 282
+      positionAbsolute:
+        x: 382
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        code: "def main(body: str) -> dict:\n    import json\n    data = json.loads(body)\n\
+          \    \n    return {\n        \"new_posts_stored\":   data[\"new_posts_stored\"\
+          ],\n        \"posts_scraped\":      data[\"posts_scraped\"],\n        \"\
+          actionable_insight\": data.get(\"actionable_insight\", \"\"),\n        \"\
+          has_analysis\":       \"true\" if data.get(\"actionable_insight\", \"\"\
+          ) else \"false\",\n        \"trend_summary\":      (data.get(\"trend_comparison\"\
+          ) or {}).get(\"actionable_insight\", \"\"),\n    }\n"
+        code_language: python3
+        outputs:
+          actionable_insight:
+            children: null
+            type: string
+          has_analysis:
+            children: null
+            type: string
+          new_posts_stored:
+            children: null
+            type: number
+          posts_scraped:
+            children: null
+            type: number
+          trend_summary:
+            children: null
+            type: string
+        selected: false
+        title: Code
+        type: code
+        variables:
+        - value_selector:
+          - '1777310571300'
+          - body
+          value_type: string
+          variable: body
+      height: 51
+      id: '1777311639665'
+      position:
+        x: 683
+        y: 282
+      positionAbsolute:
+        x: 683
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        cases:
+        - case_id: 'true'
+          conditions:
+          - comparison_operator: is
+            id: c04a55be-9a6e-401b-a7af-9f96b77d75ad
+            value: 'true'
+            varType: string
+            variable_selector:
+            - '1777311639665'
+            - has_analysis
+          id: 'true'
+          logical_operator: and
+        selected: false
+        title: IF/ELSE
+        type: if-else
+      height: 123
+      id: '1777311752347'
+      position:
+        x: 984
+        y: 282
+      positionAbsolute:
+        x: 984
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        headers: ''
+        method: get
+        params: ''
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 100
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 0
+          max_read_timeout: 0
+          max_write_timeout: 0
+        title: HTTP Request 2
+        type: http-request
+        url: https://pulsescout-latest.onrender.com/reports/analysis?max_count=1
+        variables: []
+      height: 152
+      id: '1777312450711'
+      position:
+        x: 1285
+        y: 282
+      positionAbsolute:
+        x: 1285
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        code: "def main(body: str) -> dict:\n    import json\n    data = json.loads(body)\n\
+          \    reports = data.get(\"reports\", [])[:1]\n    if not reports:\n    \
+          \    return {\"count\": 0, \"insights\": [], \"topics\": [], \"trends\"\
+          : []}\n    r = reports[0]\n    return {\n        \"count\":    data[\"count\"\
+          ],\n        \"insights\": [r[\"actionable_insight\"]],\n        \"topics\"\
+          :   [t[\"topic\"] for t in r.get(\"top_topics\", [])],\n        \"trends\"\
+          :   [r[\"trend_comparison\"][\"actionable_insight\"]]\n                \
+          \    if r.get(\"trend_comparison\") else [],\n    }\n"
+        code_language: python3
+        outputs:
+          count:
+            children: null
+            type: number
+          insights:
+            children: null
+            type: array[string]
+          topics:
+            children: null
+            type: array[string]
+          trends:
+            children: null
+            type: array[string]
+        selected: false
+        title: Code 2
+        type: code
+        variables:
+        - value_selector:
+          - '1777312450711'
+          - body
+          value_type: string
+          variable: body
+      height: 51
+      id: '1777312924584'
+      position:
+        x: 1586
+        y: 282
+      positionAbsolute:
+        x: 1586
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    - data:
+        outputs:
+        - value_selector:
+          - '1777312924584'
+          - insights
+          value_type: array[string]
+          variable: insights
+        - value_selector:
+          - '1777312924584'
+          - topics
+          value_type: array[string]
+          variable: topics
+        - value_selector:
+          - '1777312924584'
+          - trends
+          value_type: array[string]
+          variable: trends
+        selected: false
+        title: Output
+        type: end
+      height: 139
+      id: '1777313155071'
+      position:
+        x: 1887
+        y: 282
+      positionAbsolute:
+        x: 1887
+        y: 282
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 241
+    viewport:
+      x: -1466
+      y: 88
+      zoom: 1
+  rag_pipeline_variables: []

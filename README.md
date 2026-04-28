@@ -4,22 +4,26 @@ Social Knowledge Doomscroll Agent that continuously monitors YouTube and HackerN
 
 ## Architecture
 
-```
-YouTube API / HN API
-        |
-    Scrapper (scrap_util.py)
-        |
-    Deduplication (UUID5)
-        |
-    Qdrant Cloud (vector store)
-        |
-    Ollama LLM (gemma3:12b)
-        |
-    Sentiment + Topics + Trends
-        |
-    FastAPI REST API
-        |
-    n8n / Swagger UI / curl
+```mermaid
+flowchart TD
+    YT[YouTube Data API v3]
+    HN[HackerNews Firebase API]
+
+    YT --> S[Scrapper]
+    HN --> S
+
+    S -->|UUID5 dedup| P[(Posts — Qdrant)]
+    S --> C[(Comments — Qdrant)]
+
+    P -->|batch posts| A[Analyzer\nOllama gemma3:12b]
+    R[(Reports — Qdrant)] -->|seed last_analysis on startup| A
+    A -->|sentiment · topics · trends| R
+
+    P --> API[FastAPI REST API]
+    R --> API
+
+    API -->|POST /scrape/| W1[Dify — Scheduled Workflow\nevery 6h]
+    API -->|POST /search/\nGET /reports/analysis| W2[Dify — Query Chatflow]
 ```
 
 ### Project Structure
@@ -40,17 +44,17 @@ src/
     report_model.py        # Reports collection
   controllers/
     scrape_controller.py   # Orchestrates scrape + analyze cycle
-    reports_controller.py  # Recent posts retrieval
+    reports_controller.py  # Analysis reports retrieval
     search_controller.py   # Vector search
   dtos/
-    scrape_dto.py          # Request/response for /scrape
+    scrape_dto.py          # Response for /scrape
     search_dto.py          # Request/response for /search
-    reports_dto.py         # Request/response for /reports
-    common_dto.py          # Shared DTOs (PostDto, TopicDto, TrendDto)
+    reports_dto.py         # Response for /reports/analysis
+    common_dto.py          # Shared DTOs (TopicDto, TrendDto)
   routes/
     scrape_routes.py       # POST /scrape/
     search_routes.py       # POST /search/
-    reports_routes.py      # GET /reports/, GET /reports/latest
+    reports_routes.py      # GET /reports/analysis
     health_routes.py       # GET /health
 tests/
   test_analyzer.py         # JSON parsing + prompt template tests
@@ -59,6 +63,10 @@ tests/
   test_dtos.py             # Pydantic validation tests
   test_models.py           # ORM model serialization tests
   test_routes.py           # API endpoint tests
+docs/
+  scheduled_scrape.yml     # Dify scheduled workflow DSL
+  query_chatflow.yml       # Dify query chatflow DSL
+  screenshots/             # Workflow screenshots
 ```
 
 ## Setup
@@ -110,30 +118,24 @@ API docs available at `http://localhost:8000/docs`
 pytest -v
 ```
 
-All 53 tests run with mocked external services. No API keys required for testing.
+All tests run with mocked external services. No API keys required for testing.
 
 ## API Endpoints
 
 ### POST /scrape/
 
-Runs a full scrape + analyze cycle.
+Triggers a full scrape + analyze cycle across 5 monitored topics:
+`AI market trends` · `tech startup funding` · `venture capital` · `emerging technology` · `consumer sentiment`
 
-```json
-{
-  "tags": ["AI trends", "tech startups"],
-  "limit": 25
-}
+Returns sentiment breakdown, top topics, actionable insight, and trend comparison against the previous batch.
+
+### GET /reports/analysis
+
+Returns stored analysis reports sorted by most recent, each containing sentiment breakdown, top topics, actionable insight, and trend comparison.
+
 ```
-
-Returns sentiment breakdown, top topics, actionable insight, and trend comparison.
-
-### GET /reports/latest
-
-Returns the most recent batch of analyzed posts.
-
-### GET /reports/
-
-Returns posts from the last 30 days.
+GET /reports/analysis?max_count=5
+```
 
 ### POST /search/
 
@@ -150,6 +152,56 @@ Vector search across stored posts.
 
 Health check. Returns `{"status": "ok", "service": "PulseScout"}`.
 
+## Orchestration
+
+PulseScout exposes a REST API that Dify orchestrates via two workflows.
+
+### Workflow 1 — Scheduled Scrape
+
+Runs every 6 hours automatically. Calls `POST /scrape/`, parses the response, and fetches the latest analysis report only if new posts were stored and LLM analysis succeeded.
+
+```
+[Schedule Trigger: every 6h]
+        ↓
+[HTTP: POST /scrape/]
+        ↓
+[Code: parse_scrape]
+        ↓
+[IF: has_analysis = "true"]
+        ↓ yes                    ↓ else
+[HTTP: GET /reports/analysis]  [End]
+        ↓
+[Code: parse_analysis]
+        ↓
+[End: insights, topics, trends]
+```
+
+![Scheduled Scrape](docs/screenshots/scheduled_scrape.jpeg)
+
+### Workflow 2 — Query Chatflow
+
+Natural language interface over stored insights. Takes a user question, searches for relevant posts, fetches recent analysis, then synthesizes a market intelligence answer via LLM (Gemini Flash).
+
+```
+[Start: user_query]
+        ↓
+[HTTP: POST /search/]
+        ↓
+[Code: parse_search]
+        ↓
+[HTTP: GET /reports/analysis]
+        ↓
+[Code: parse_analysis]
+        ↓
+[LLM: Gemini Flash — market analyst prompt]
+        ↓
+[Answer]
+```
+
+![Query Chatflow](docs/screenshots/query_chatflow.jpeg)
+
+DSL exports: [`docs/scheduled_scrape.yml`](docs/scheduled_scrape.yml) · [`docs/query_chatflow.yml`](docs/query_chatflow.yml)
+
 ## Deployment
 
 ### Docker
@@ -161,11 +213,7 @@ docker run -p 8000:8000 --env-file .env pulsescout
 
 ### CI/CD
 
-GitHub Actions pipeline: test -> build Docker image -> push to GHCR -> deploy to Render.
-
-### n8n Orchestration (optional)
-
-Set up an n8n workflow with a Schedule Trigger that calls `POST /scrape/` every 6 hours to continuously monitor trends.
+GitHub Actions pipeline: test → build Docker image → push to GHCR → deploy to Render.
 
 ## Tech Stack
 
@@ -173,9 +221,9 @@ Set up an n8n workflow with a Schedule Trigger that calls `POST /scrape/` every 
 |---|---|
 | API | FastAPI |
 | Scraping | YouTube Data API v3, HackerNews Firebase API |
-| Vector Store | Qdrant Cloud |
+| Vector Store | Qdrant Cloud (Posts · Comments · Reports) |
 | LLM Analysis | Ollama Cloud (gemma3:12b) |
-| Embeddings | Hash-based (SHA256 -> 384-dim vectors) |
-| CI/CD | GitHub Actions -> GHCR -> Render |
-| Testing | pytest (53 tests, fully mocked) |
-| Orchestration | n8n (optional) |
+| Embeddings | Hash-based (SHA256 → 384-dim vectors) |
+| CI/CD | GitHub Actions → GHCR → Render |
+| Testing | pytest (fully mocked) |
+| Orchestration | Dify (scheduled workflow + query chatflow) |
